@@ -1,3 +1,5 @@
+mod query;
+
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -22,6 +24,8 @@ use anyhow::Result;
 use log::{info, warn};
 use lsp_server::{Connection, Message};
 
+use crate::query::{QueryGetArgs, query_get, query_list};
+
 #[derive(Subcommand)]
 enum Commands {
     GenConfig(GenerateArgs),
@@ -31,6 +35,10 @@ enum Commands {
     Version,
     #[clap(hide(true))]
     Run,
+    /// List all opcode names
+    QueryList,
+    /// Get info about queried name
+    QueryGet(QueryGetArgs),
 }
 
 /// Entry point of the lsp. Runs a subcommand is specified, otherwise starts the
@@ -74,6 +82,19 @@ pub fn main() -> Result<()> {
         Commands::Version => println!("{}", env!("CARGO_PKG_VERSION")),
         Commands::Info => run_info(),
         Commands::Run => run_lsp()?,
+        Commands::QueryList => query_list()?,
+        Commands::QueryGet(args) => {
+            let opts: QueryGetArgs = match args.try_into() {
+                Ok(opts) => opts,
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            };
+            if let Some(name) = opts.name {
+                query_get(&name)?
+            }
+        }
     }
 
     Ok(())
